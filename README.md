@@ -1,2 +1,2 @@
-# Handibot-Device-Stand
-App for creating device stand.
+# Handibot-Monochrome-Carving
+App for carving monchrome image.

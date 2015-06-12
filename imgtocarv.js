@@ -3,12 +3,12 @@
  */
 
 /**
- * Returns the percentage of black in the pixel (0 to 1).
+ * Returns the percentage (0 to 1) of black in the pixel.
  *
  * @param {Image data} imageData The image data.
  * @param {number} i The line number.
  * @param {number} j The column number.
- * @return {number} The percentage of black in the pixel (0 to 1).
+ * @return {number} The percentage (0 to 1) of black in the pixel.
  */
 function getPercentage(imageData, i, j) {
     //1 px = [R, G, B, A]
@@ -18,7 +18,19 @@ function getPercentage(imageData, i, j) {
     return 1 - (imageData.data[px] / 255);  //Assuming R = G = B
 }
 
+/**
+ * Returns the average percentage (0 to 1) of black in the area.
+ *
+ * @param {Image data} imageData The image data.
+ * @param {number} iStart The start line number.
+ * @param {number} jStart The start column number.
+ * @param {number} iEnd The end line number (include).
+ * @param {number} jEnd The end column number (include).
+ * @return {number} The percentage (0 to 1) of black in the area.
+ */
 function getAverage(imageData, iStart, jStart, iEnd, jEnd) {
+    var sum = 0, count = 0, i = 0, j = 0;
+
     //swapping
     if(iStart > iEnd) {
         iStart = iStart + iEnd;
@@ -31,6 +43,15 @@ function getAverage(imageData, iStart, jStart, iEnd, jEnd) {
         jEnd = jStart - jEnd;
         jStart = jStart - jEnd;
     }
+
+    for(i=iStart; i < imageData.width && i <= iEnd; i++) {
+        for(j=jStart; j < imageData.height && j <= jEnd; j++) {
+            sum += getPercentage(imageData, i, j);
+            count++;
+        }
+    }
+
+    return sum/count;
 }
 
 //TODO: change name and test
@@ -46,6 +67,7 @@ function imageToPercent(image, pixelToInch, bitDiameter) {
     var tab = [];  //TABle
     var img = new Image();
     img.src = source;
+    //TODO: wait the end of the image loading
     var imageData = context.getImageData(0, 0, myImage.width, myImage.height);
     if(img.width*pixelToInch < bitDiameter || img.height*pixelToInch < bitDiameter)
         return [[]];
@@ -93,19 +115,7 @@ context.drawImage(myImage, 0, 0);
 var imageData = context.getImageData(0, 0, myImage.width, myImage.height);
 var pixels = context.getImageData(0, 0, myImage.width, myImage.height).data;
 
-console.log(getPercentage(imageData, 0, 0));
-console.log(getPercentage(imageData, 0, 1));
-console.log(getPercentage(imageData, 0, 2));
-console.log(getPercentage(imageData, 0, 3));
-console.log(getPercentage(imageData, 1, 0));
-console.log(getPercentage(imageData, 1, 1));
-console.log(getPercentage(imageData, 1, 2));
-console.log(getPercentage(imageData, 1, 3));
-console.log(getPercentage(imageData, 2, 0));
-console.log(getPercentage(imageData, 2, 1));
-console.log(getPercentage(imageData, 2, 2));
-console.log(getPercentage(imageData, 2, 3));
-console.log(getPercentage(imageData, 3, 0));
-console.log(getPercentage(imageData, 3, 1));
-console.log(getPercentage(imageData, 3, 2));
-console.log(getPercentage(imageData, 3, 3));
+console.log(getAverage(imageData, 0.5, 0.5, 1.5, 1.5));
+console.log(getAverage(imageData, 0.5, 2.5, 1.5, 3.5));
+console.log(getAverage(imageData, 2.5, 0.5, 3.5, 1.5));
+console.log(getAverage(imageData, 2.5, 2.5, 3.5, 3.5));

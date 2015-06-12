@@ -22,10 +22,10 @@ function getPercentage(imageData, i, j) {
  * Returns the average percentage (0 to 1) of black in the area.
  *
  * @param {Image data} imageData The image data.
- * @param {number} iStart The start line number.
- * @param {number} jStart The start column number.
- * @param {number} iEnd The end line number (include).
- * @param {number} jEnd The end column number (include).
+ * @param {number} iStart The start line number (include).
+ * @param {number} jStart The start column number (include).
+ * @param {number} iEnd The end line number (exclude).
+ * @param {number} jEnd The end column number (exclude).
  * @return {number} The percentage (0 to 1) of black in the area.
  */
 function getAverage(imageData, iStart, jStart, iEnd, jEnd) {
@@ -44,8 +44,8 @@ function getAverage(imageData, iStart, jStart, iEnd, jEnd) {
         jStart = jStart - jEnd;
     }
 
-    for(i=iStart; i < imageData.width && i <= iEnd; i++) {
-        for(j=jStart; j < imageData.height && j <= jEnd; j++) {
+    for(i=iStart; i < imageData.width && i < iEnd; i++) {
+        for(j=jStart; j < imageData.height && j < jEnd; j++) {
             sum += getPercentage(imageData, i, j);
             count++;
         }
@@ -61,31 +61,33 @@ function getAverage(imageData, iStart, jStart, iEnd, jEnd) {
  * @param {string} source The source of the image.
  * @param {number} pixelToInch The number of inches for a pixel.
  * @param {number} bitDiameter The bit diameter (in inches).
- * @return {two dimensional array} The array. Empty array if a problem.
+ * @return {object} An object with three members: width (number), height (number),
+ *   map (array of number) wich represents the percentage
  */
-function imageToPercent(image, pixelToInch, bitDiameter) {
-    var tab = [];  //TABle
+function getMapPercentage(source, pixelToInch, bitDiameter) {
+    var tab = [];  //TABle for the percentage
     var img = new Image();
     img.src = source;
     //TODO: wait the end of the image loading
     var imageData = context.getImageData(0, 0, myImage.width, myImage.height);
     if(img.width*pixelToInch < bitDiameter || img.height*pixelToInch < bitDiameter)
-        return [[]];
+    {
+        return { width : 0, height : 0, map : [] };
+    }
 
     var delta = bitDiameter / pixelToInch;
     var iPx = 0, jPx = 0, iTab = 0, jTab = 0;
 
     for(iPx=0; iPx < img.width; iPx+=delta) {
-        tab[iTab].push([]);
+        jTab = 0;
         for(jPx=0; jPx < img.height; jPx+=delta) {
-            tab[iTab][jTab] = getAverage(imageData, iPx, jPx, iPx+delta, jPx+delta);
+            tab.push(getAverage(imageData, iPx, jPx, iPx+delta, jPx+delta));
             jTab++;
         }
         iTab++;
-        jTab = 0;
     }
 
-    return tab;
+    return { width : iTab, height : jTab, map : tab };
 }
 
 /**
@@ -115,7 +117,7 @@ context.drawImage(myImage, 0, 0);
 var imageData = context.getImageData(0, 0, myImage.width, myImage.height);
 var pixels = context.getImageData(0, 0, myImage.width, myImage.height).data;
 
-console.log(getAverage(imageData, 0.5, 0.5, 1.5, 1.5));
-console.log(getAverage(imageData, 0.5, 2.5, 1.5, 3.5));
-console.log(getAverage(imageData, 2.5, 0.5, 3.5, 1.5));
-console.log(getAverage(imageData, 2.5, 2.5, 3.5, 3.5));
+console.log(getMapPercentage("image.png", 1, 0.5));
+console.log(getMapPercentage("image.png", 1, 1));
+console.log(getMapPercentage("image.png", 1, 2));
+console.log(getAverage(imageData, 0, 0, 2, 2));

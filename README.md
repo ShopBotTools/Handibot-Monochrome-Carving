@@ -1,6 +1,10 @@
 # Handibot-Monochrome-Carving
 App for carving grayscale image. The darker, the more profound it is carved.
 
+##Versions:
+* Pixellized
+* Smoother (will be subdivised in other section)
+
 ##TODO:
 Those steps are not exhaustive, they are just guidelines.
 1. Find simple paths (regardless to the anti-aliasing)

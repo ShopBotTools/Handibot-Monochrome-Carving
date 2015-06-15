@@ -22,7 +22,9 @@ var configuration = {
     bitDiameter : 1,
     maxCarvingDepth : 1,
     marginEdge : 0,
-    type : "pixelized"
+    type : "pixelized",
+    safeZ : 3,
+    bitLength : 2
 }
 
 /**
@@ -121,7 +123,6 @@ function getTablePercentage(source, pixelToInch, bitDiameter) {
  * @param {number} cellSize The size of a cell
  * @return {number} The X position
  */
-//TODO: tester
 function getRealX(table, n, cellSize) {
     return n % table.width * cellSize + cellSize / 2;
 }
@@ -134,20 +135,30 @@ function getRealX(table, n, cellSize) {
  * @param {number} cellSize The size of a cell
  * @return {number} The Y position
  */
-//TODO: tester
 function getRealY(table, n, cellSize) {
-    console.log("n: " + n +" => " +(table.height - 1 - parseInt(n / table.width)) * cellSize + cellSize / 2);
     //Because screen position is not real, we use table.height
     return (table.height - 1 - parseInt(n / table.width)) * cellSize + cellSize / 2;
 }
 
-
-//TODO: tester
+/**
+ * Returns the real Z position of the nth element of the table.
+ *
+ * @param {number} percentage The percentage of carving
+ * @param {object} config The configuration
+ * @return {number} The Z position
+ */
 function getRealZ(percentage, config) {
     return -(percentage * config.maxCarvingDepth);
 }
 
-//TODO: tester
+/**
+ * Tests if the two percentages are "equal" or not.
+ *
+ * @param {number} percentage1 A percentage.
+ * @param {number} percentage2 A percentage.
+ * @param {object} config The configuration.
+ * @return {boolean} Returns if the two percentages are "equal" or not.
+ */
 function percentagesEqual(percentage1, percentage2, config) {
     return (Math.abs(percentage1 - percentage2) <= config.marginEdge);
 }
@@ -202,18 +213,78 @@ function getPixelizedPaths(table, config) {
     return paths;
 }
 
-function getGCode(paths) {
+/**
+ * Generate GCode for cutting from the start point to the end point.
+ *
+ * @param {object} config The configuration.
+ * @param {number} startX The X start point.
+ * @param {number} startY The Y start point.
+ * @param {number} startZ The Z start point.
+ * @param {number} endX The X end point.
+ * @param {number} endY The Y end point.
+ * @param {number} endZ The Z end point.
+ * @return {string} The Gcode for this cut
+ */
+function getGCodeStraight(config, startX, startY, startZ, endX, endY, endZ) {
+    var gcode = "";
+    var z = 0;
+    console.log("Dedans");
+
+    //Have to do multiple passes because of the height of the bit
+    do {
+        gcode += "(Go to the start cut position)\n";
+        gcode += "G0 Z" + config.safeZ.toFixed(5) + "\n";
+        gcode += "G0 X" + startX.toFixed(5) + " Y" + startY.toFixed(5) + "\n";
+        z -= config.bitLength;
+        if(z < endZ)
+            z = endZ;
+        gcode += "(One pass)\n";
+        gcode += "G1 Z" + z.toFixed(5) + "\n";
+        gcode += "G1 X" + endX.toFixed(5) + " Y" + endY.toFixed(5) + "\n";
+    } while(z > endZ);
+    gcode += "G0 Z" + config.safeZ.toFixed(5) + "\n";
+
+    return gcode;
 }
 
-function imgToCarv(source, config)
+/**
+ * Creates the GCode according to the paths.
+ *
+ * @param {object} paths The paths.
+ * @return {string} The GCode (empty string if no paths).
+ */
+function getGCode(config, paths) {
+    var gcode = "";
+    var i = 0;
+    if(paths.length == 0)
+        return gcode;
+
+    gcode += "G20 (inches)\n";
+    gcode += "G0 Z" + config.safeZ.toFixed(5) + "\n";
+    gcode += "M3 (Spindle on clock wise)\n";
+
+    console.log("paths.length= " + paths.length);
+    for(i=0; i < paths.length; i++) {
+        gcode += getGCodeStraight(config, paths[i].startX, paths[i].startY,
+                paths[i].startZ, paths[i].endX, paths[i].endY, paths[i].endZ);
+    }
+
+    gcode += "M8 (Spindle off)\n";
+
+    gcode += "(Go to the initial position)\n";
+    gcode += "G0 Z" + config.safeZ.toFixed(5) + "\n";
+    gcode += "G0 X0 Y0\n";
+    return gcode;
+}
+
+function imgToCarv(config, source)
 {
     var table = getTablePercentage(source, config.pixelToInch, config.bitDiameter);
-    //TODO: do something very simple: find the paths (don't care about right angle)
     var paths = [];
     if(config.type == "pixelized")
         paths = getPixelizedPaths(table, config);
 
-    return getGCode(paths);
+    return getGCode(config, paths);
 }
 
 //TODO: delete all the tests when over
@@ -233,5 +304,6 @@ console.log(getTablePercentage("image.png", 1, 1));
 console.log(getTablePercentage("image.png", 1, 2));
 console.log(getAverage(imageData, 0, 0, 2, 2));
 
-var table = getTablePercentage("image.png", 1, 1);
+var table = getTablePercentage("image.png", 1, 2);
 console.log(getPixelizedPaths(table, configuration));
+console.log(imgToCarv(configuration, "image.png"));

@@ -226,21 +226,37 @@ var imageToCarving = {
         var gcode = "";
         var z = 0;
         var startX = path.start.x.toFixed(5), startY = path.start.y.toFixed(5);
-        var startZ = path.start.z.toFixed(5);
+        // var startZ = path.start.z.toFixed(5);
         var endX = path.end.x.toFixed(5), endY = path.end.y.toFixed(5);
+        //XXX: Check for the Z
+        var maxZ = 0;
+        var z1Done = false, z2Done = false;
 
         //Have to do multiple passes because of the height of the bit
         do {
+            maxZ -= this.bitLength;  //The maximum we can go deep in this pass
+            if(maxZ <= path.start.z) {
+                startZ = path.start.z.toFixed(5);
+                z1Done = true;
+            }
+            else
+                startZ = maxZ.toFixed(5);
+
+            if(maxZ <= path.end.z) {
+                endZ = path.end.z.toFixed(5);
+                z2Done = true;
+            }
+            else
+                endZ = maxZ.toFixed(5);
+
             gcode += "(Go to the start cut position)\n";
             gcode += "G0 Z" + this.safeZ.toFixed(5) + "\n";
             gcode += "G0 X" + startX + " Y" + startY + "\n";
-            z -= this.bitLength;
-            if(z < path.end.z)
-                z = path.end.z;
-            gcode += "(One pass)\n";
-            gcode += "G1 Z" + z.toFixed(5) + "\n";
-            gcode += "G1 X" + endX + " Y" + endY + "\n";
-        } while(z > path.end.z);
+
+            gcode += "(Cutting one pass)\n";
+            gcode += "G1 Z" + startZ + "\n";
+            gcode += "G1 X" + endX + " Y" + endY + " Z" + endZ + "\n";
+        } while(z1Done === false || z2Done === false);
         gcode += "G0 Z" + this.safeZ.toFixed(5) + "\n";
 
         return gcode;
@@ -255,7 +271,6 @@ var imageToCarving = {
     getGCodeFromPaths: function(paths) {
         var gcode = "";
         var i = 0;
-        console.log(paths);
         if(paths.length === 0)
             return gcode;
 
@@ -263,7 +278,6 @@ var imageToCarving = {
         gcode += "G0 Z" + this.safeZ.toFixed(5) + "\n";
         gcode += "M3 (Spindle on clock wise)\n";
 
-        console.log("paths.length= " + paths.length);
         for(i=0; i < paths.length; i++) {
             gcode += this.getGCodeStraight(paths[i]);
         }
@@ -279,7 +293,6 @@ var imageToCarving = {
     getGCode: function(image) {
         var table = this.getTablePercentage(image);
         var paths = [];
-        console.log(" image: " + image);
         if(this.type == "pixelized")
             paths = this.getPixelizedPaths(table);
 
@@ -313,4 +326,6 @@ myImage.src = "image.png";
 
 // var table = imageToCarving.getTablePercentage(myImage, 1, 2);
 // console.log(imageToCarving.getPixelizedPaths(table));
+imageToCarving.marginEdge = 1;
+imageToCarving.bitLength = 0.1;
 console.log(imageToCarving.getGCode(myImage));

@@ -84,19 +84,18 @@ function getAverage(imageData, iStart, jStart, iEnd, jEnd) {
 /**
  * Generate an array of carving percentage. Each cells have the size of the bit.
  *
- * @param {string} source The source of the image.
+ * @param {Image()} image The image.
  * @param {number} pixelToInch The number of inches for a pixel.
  * @param {number} bitDiameter The bit diameter (in inches).
  * @return {object} An object with three members: width (number), height (number),
  *   table (array of number) wich represents the percentage
  */
-function getTablePercentage(source, pixelToInch, bitDiameter) {
+function getTablePercentage(image, pixelToInch, bitDiameter) {
     var tab = [];  //TABle for the percentage
-    var img = new Image();
-    img.src = source;
-    //TODO: wait the end of the image loading
     var imageData = context.getImageData(0, 0, myImage.width, myImage.height);
-    if(img.width*pixelToInch < bitDiameter || img.height*pixelToInch < bitDiameter)
+
+    if(image.width*pixelToInch < bitDiameter ||
+        image.height*pixelToInch < bitDiameter)
     {
         return { width : 0, height : 0, table : [] };
     }
@@ -104,9 +103,9 @@ function getTablePercentage(source, pixelToInch, bitDiameter) {
     var delta = bitDiameter / pixelToInch;
     var iPx = 0, jPx = 0, iTab = 0, jTab = 0;
 
-    for(iPx=0; iPx < img.width; iPx+=delta) {
+    for(iPx=0; iPx < image.width; iPx+=delta) {
         jTab = 0;
-        for(jPx=0; jPx < img.height; jPx+=delta) {
+        for(jPx=0; jPx < image.height; jPx+=delta) {
             tab.push(getAverage(imageData, iPx, jPx, iPx+delta, jPx+delta));
             jTab++;
         }
@@ -172,7 +171,7 @@ function addPath(paths, startX, startY, startZ, endX, endY, endZ) {
 }
 
 //Do a stupid path like a printer  (doing it recursively?)
-function getPixelizedPaths(table, config) {
+function getPixelizedPaths(config, table) {
     var paths = [];
     var sX = -1, sY = -1, sZ = -1, endN; //Start point
     var currentPercentage = -1;
@@ -257,6 +256,7 @@ function getGCodeStraight(config, path) {
 function getGCode(config, paths) {
     var gcode = "";
     var i = 0;
+    console.log(paths);
     if(paths.length === 0)
         return gcode;
 
@@ -277,12 +277,13 @@ function getGCode(config, paths) {
     return gcode;
 }
 
-function imgToCarv(config, source)
+function imgToCarv(config, image)
 {
-    var table = getTablePercentage(source, config.pixelToInch, config.bitDiameter);
+    var table = getTablePercentage(image, config.pixelToInch, config.bitDiameter);
     var paths = [];
+    console.log(" image: " + image);
     if(config.type == "pixelized")
-        paths = getPixelizedPaths(table, config);
+        paths = getPixelizedPaths(config, table);
 
     return getGCode(config, paths);
 }
@@ -299,11 +300,11 @@ context.drawImage(myImage, 0, 0);
 var imageData = context.getImageData(0, 0, myImage.width, myImage.height);
 var pixels = context.getImageData(0, 0, myImage.width, myImage.height).data;
 
-console.log(getTablePercentage("image.png", 1, 0.5));
-console.log(getTablePercentage("image.png", 1, 1));
-console.log(getTablePercentage("image.png", 1, 2));
+console.log(getTablePercentage(myImage, 1, 0.5));
+console.log(getTablePercentage(myImage, 1, 1));
+console.log(getTablePercentage(myImage, 1, 2));
 console.log(getAverage(imageData, 0, 0, 2, 2));
 
-var table = getTablePercentage("image.png", 1, 2);
-console.log(getPixelizedPaths(table, configuration));
-console.log(imgToCarv(configuration, "image.png"));
+var table = getTablePercentage(myImage, 1, 2);
+console.log(getPixelizedPaths(configuration, table));
+console.log(imgToCarv(configuration, myImage));

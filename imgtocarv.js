@@ -18,6 +18,7 @@
 
 //TODO: do it more "OOP"
 var configuration = {
+    loaded : false,
     pixelToInch : 1,
     bitDiameter : 1,
     maxCarvingDepth : 1,
@@ -25,7 +26,7 @@ var configuration = {
     type : "pixelized",
     safeZ : 3,
     bitLength : 2
-}
+};
 
 /**
  * Returns the percentage (0 to 1) of black in the pixel.
@@ -159,20 +160,27 @@ function getRealZ(percentage, config) {
  * @param {object} config The configuration.
  * @return {boolean} Returns if the two percentages are "equal" or not.
  */
-function percentagesEqual(percentage1, percentage2, config) {
+function hasToBeSmoothed(percentage1, percentage2, config) {
     return (Math.abs(percentage1 - percentage2) <= config.marginEdge);
+}
+
+function addPath(paths, startX, startY, startZ, endX, endY, endZ) {
+    paths.push({
+        "start" : { "x" : startX, "y" : startY, "z" : startZ },
+        "end" : { "x" : endX, "y" : endY, "z" : endZ }
+    });
 }
 
 //Do a stupid path like a printer  (doing it recursively?)
 function getPixelizedPaths(table, config) {
     var paths = [];
-    var sX = -1, sY = -1, sZ = -1; //Start point
+    var sX = -1, sY = -1, sZ = -1, endN; //Start point
     var currentPercentage = -1;
     var n;
 
     for(n = 0; n < table.table.length; n++) {
         //Start a path
-        if(currentPercentage == -1 && table.table[n] != 0) {
+        if(currentPercentage === -1 && table.table[n] !== 0) {
             currentPercentage = table.table[n];
             sX = getRealX(table, n, config.bitDiameter);
             sY = getRealY(table, n, config.bitDiameter);
@@ -181,33 +189,29 @@ function getPixelizedPaths(table, config) {
         }
         //Continue the same path
         if(sY == getRealY(table, n , config.bitDiameter) &&
-                percentagesEqual(table.table[n], currentPercentage, config))
+                currentPercentage == table.table[n])
             continue;
 
+        if(hasToBeSmoothed(table.table[n], currentPercentage, config))
+            endN = n;
+        else
+            endN = n-1;
+
         //Path discontinued
-        paths.push({
-            startX : sX,
-            startY : sY,
-            startZ : sZ,
-            endX : getRealX(table, n-1, config.bitDiameter),
-            endY : getRealY(table, n-1, config.bitDiameter),
-            endZ : getRealZ(table.table[n-1], config)
-        });
+        addPath(paths, sX, sY, sZ, getRealX(table, endN, config.bitDiameter),
+                getRealY(table, endN, config.bitDiameter),
+                getRealZ(table.table[endN], config));
         currentPercentage = -1;
-        if(table.table[n] == 0)
+        if(table.table[n] === 0)
             continue;
         n--;  //like that it will go to the previous tests
     }
 
     if(sX != -1) {  //Because we can miss the last path
-        paths.push({
-            startX : sX,
-            startY : sY,
-            startZ : sZ,
-            endX : getRealX(table, n-1, config.bitDiameter),
-            endY : getRealY(table, n-1, config.bitDiameter),
-            endZ : getRealZ(table.table[n-1], config)
-        });
+        endN = table.table.length - 1;
+        addPath(paths, sX, sY, sZ, getRealX(table, endN, config.bitDiameter),
+                getRealY(table, endN, config.bitDiameter),
+                getRealZ(table.table[endN], config));
     }
 
     return paths;
@@ -217,31 +221,28 @@ function getPixelizedPaths(table, config) {
  * Generate GCode for cutting from the start point to the end point.
  *
  * @param {object} config The configuration.
- * @param {number} startX The X start point.
- * @param {number} startY The Y start point.
- * @param {number} startZ The Z start point.
- * @param {number} endX The X end point.
- * @param {number} endY The Y end point.
- * @param {number} endZ The Z end point.
+ * @param {object} path The path.
  * @return {string} The Gcode for this cut
  */
-function getGCodeStraight(config, startX, startY, startZ, endX, endY, endZ) {
+function getGCodeStraight(config, path) {
     var gcode = "";
     var z = 0;
-    console.log("Dedans");
+    var startX = path.start.x.toFixed(5), startY = path.start.y.toFixed(5);
+    var startZ = path.start.z.toFixed(5);
+    var endX = path.end.x.toFixed(5), endY = path.end.y.toFixed(5);
 
     //Have to do multiple passes because of the height of the bit
     do {
         gcode += "(Go to the start cut position)\n";
         gcode += "G0 Z" + config.safeZ.toFixed(5) + "\n";
-        gcode += "G0 X" + startX.toFixed(5) + " Y" + startY.toFixed(5) + "\n";
+        gcode += "G0 X" + startX + " Y" + startY + "\n";
         z -= config.bitLength;
-        if(z < endZ)
-            z = endZ;
+        if(z < path.end.z)
+            z = path.end.z;
         gcode += "(One pass)\n";
         gcode += "G1 Z" + z.toFixed(5) + "\n";
-        gcode += "G1 X" + endX.toFixed(5) + " Y" + endY.toFixed(5) + "\n";
-    } while(z > endZ);
+        gcode += "G1 X" + endX + " Y" + endY + "\n";
+    } while(z > path.end.z);
     gcode += "G0 Z" + config.safeZ.toFixed(5) + "\n";
 
     return gcode;
@@ -256,7 +257,7 @@ function getGCodeStraight(config, startX, startY, startZ, endX, endY, endZ) {
 function getGCode(config, paths) {
     var gcode = "";
     var i = 0;
-    if(paths.length == 0)
+    if(paths.length === 0)
         return gcode;
 
     gcode += "G20 (inches)\n";
@@ -265,8 +266,7 @@ function getGCode(config, paths) {
 
     console.log("paths.length= " + paths.length);
     for(i=0; i < paths.length; i++) {
-        gcode += getGCodeStraight(config, paths[i].startX, paths[i].startY,
-                paths[i].startZ, paths[i].endX, paths[i].endY, paths[i].endZ);
+        gcode += getGCodeStraight(config, paths[i]);
     }
 
     gcode += "M8 (Spindle off)\n";

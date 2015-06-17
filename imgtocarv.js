@@ -1,6 +1,37 @@
+/*jslint todo: true, browser: true, continue: true */
 /**
  * Written by Alex Canales for ShopBotTools, Inc.
  */
+
+//TODO: delete these functions:
+//Testing functions
+function printPaths(paths) {
+    var i = 0;
+    var str = "";
+    for(i = 0; i < paths.length; i++) {
+        str += i + "    ";
+        str += "("+paths[i].start.x+";"+paths[i].start.y+";"+paths[i].start.z+")";
+        str += " => ";
+        str += "("+paths[i].end.x+";"+paths[i].end.y+";"+paths[i].end.z+")";
+        str += "\n";
+    }
+    console.log(str);
+}
+
+function printTable(table) {
+    var i = 0;
+    var str = "";
+    for(i = 0; i < table.table.length; i++) {
+        str += table.table[i];
+        if((i+1) % table.width !== 0) {
+            str += " ";
+        } else {
+            str += "\n";
+        }
+    }
+    console.log(str);
+}
+//End testing functions
 
 //TODO: do a margin for the smooth and the hard edge
 //TODO: Explain better what is marginEdge (find a better name too):
@@ -35,9 +66,10 @@ var imageToCarving = {
      */
     getPercentage: function(imageData, i, j) {
         //1 px = [R, G, B, A]
-        var px = parseInt(i) * imageData.width * 4 + parseInt(j) * 4;
-        if(px >= imageData.data.length)
+        var px = parseInt(i, 10) * imageData.width * 4 + parseInt(j, 10) * 4;
+        if(px >= imageData.data.length) {
             return 0;
+        }
         return 1 - (imageData.data[px] / 255);  //Assuming R = G = B
     },
 
@@ -88,11 +120,11 @@ var imageToCarving = {
     getTablePercentage: function(image) {
         var tab = [];  //TABle for the percentage
         var canvas = document.createElement('canvas');
-        canvas.width = myImage.width;
-        canvas.height = myImage.height;
+        canvas.width = image.width;
+        canvas.height = image.height;
         var context = canvas.getContext('2d');
-        context.drawImage(myImage, 0, 0);
-        var imageData = context.getImageData(0, 0, myImage.width, myImage.height);
+        context.drawImage(image, 0, 0);
+        var imageData = context.getImageData(0, 0, image.width, image.height);
 
         if(image.width * this.pixelToInch < this.bitDiameter ||
                 image.height * this.pixelToInch < this.bitDiameter)
@@ -120,10 +152,10 @@ var imageToCarving = {
      *
      * @param {object} table The percentage table
      * @param {number} n The index in the table
-     * @param {number} cellSize The size of a cell
      * @return {number} The X position
      */
-    getRealX: function(table, n, cellSize) {
+    getRealX: function(table, n) {
+        var cellSize = this.bitDiameter;
         return n % table.width * cellSize + cellSize / 2;
     },
 
@@ -132,12 +164,12 @@ var imageToCarving = {
      *
      * @param {object} table The percentage table
      * @param {number} n The index in the table
-     * @param {number} cellSize The size of a cell
      * @return {number} The Y position
      */
-    getRealY: function(table, n, cellSize) {
+    getRealY: function(table, n) {
         //Because screen position is not real, we use table.height
-        return (table.height - 1 - parseInt(n / table.width)) * cellSize + cellSize / 2;
+        var cellSize = this.bitDiameter;
+        return (table.height - 1 - parseInt(n / table.width, 10)) * cellSize + cellSize / 2;
     },
 
     /**
@@ -161,6 +193,17 @@ var imageToCarving = {
         return (Math.abs(percentage1 - percentage2) <= this.marginEdge);
     },
 
+    /**
+     * Add a path to the paths.
+     *
+     * @param {object} paths The paths
+     * @param {number} startX The x start point.
+     * @param {number} startY The y start point.
+     * @param {number} startZ The z start point.
+     * @param {number} endX The x end point.
+     * @param {number} endY The y end point.
+     * @param {number} endZ The z end point.
+     */
     addPath: function(paths, startX, startY, startZ, endX, endY, endZ) {
         paths.push({
             "start" : { "x" : startX, "y" : startY, "z" : startZ },
@@ -168,52 +211,123 @@ var imageToCarving = {
         });
     },
 
+    /**
+     * Add a path to the paths from the index a to the index b.
+     *
+     * @param {object} table The percentage table
+     * @param {object} paths The paths
+     * @param {number} a The a index in the percentages table.
+     * @param {number} b The a index in the percentages table.
+     */
+    addPathFromTable: function(table, paths, a, b) {
+        this.addPath(paths,
+            this.getRealX(table, a),
+            this.getRealY(table, a),
+            this.getRealZ(table.table[a]),
+            this.getRealX(table, b),
+            this.getRealY(table, b),
+            this.getRealZ(table.table[b])
+        );
+    },
+
+    getIndexTable: function(table, i, j) {
+        return j + i * table.width;
+    },
+
     //Do a stupid path like a printer  (doing it recursively?)
     getPixelizedPaths: function(table) {
         var paths = [];
+        this.getPixelizedPathsLeftToRight(table, paths);
+        // this.getPixelizedPathsUpToDown(table, paths);
+        printTable(table);
+        printPaths(paths);
+        return paths;
+    },
+
+    getPixelizedPathsUpToDown: function(table, paths) {
         var sX = -1, sY = -1, sZ = -1, endN; //Start point
         var currentPercentage = -1;
-        var n;
+        var n, j;
+
+        for(j = 0; j < table.width; j++) {
+            for(n = j; n < table.table.length; n+=table.width) {
+                //Start a path
+                if(currentPercentage === -1 && table.table[n] !== 0) {
+                    currentPercentage = table.table[n];
+                    sX = this.getRealX(table, n);
+                    sY = this.getRealY(table, n);
+                    sZ = this.getRealZ(currentPercentage);
+                    continue;
+                }
+                //Continue the same path
+                if(sY === this.getRealX(table, n , this.bitDiameter) &&
+                        currentPercentage === table.table[n]) {
+                    continue;
+                }
+
+                if(this.hasToBeSmoothed(table.table[n], currentPercentage)) {
+                    endN = n;
+                } else {
+                    endN = n-table.width;
+                }
+
+                //Path discontinued
+                this.addPath(paths, sX, sY, sZ,
+                        this.getRealX(table, endN),
+                        this.getRealY(table, endN),
+                        this.getRealZ(table.table[endN]));
+                currentPercentage = -1;
+                if(table.table[n] === 0) {
+                    continue;
+                }
+                n-=table.width;  //like that it will go to the previous tests
+            }
+            if(sX !== -1) {  //Because we can miss the last path
+                endN = n - table.width;
+                this.addPath(paths, sX, sY, sZ,
+                        this.getRealX(table, endN),
+                        this.getRealY(table, endN),
+                        this.getRealZ(table.table[endN]));
+            }
+        }
+        if(sX !== -1) {  //Because we can miss the last path
+            endN = n - table.width;
+            this.addPath(paths, sX, sY, sZ,
+                    this.getRealX(table, endN),
+                    this.getRealY(table, endN),
+                    this.getRealZ(table.table[endN]));
+        }
+    },
+
+    getPixelizedPathsLeftToRight: function(table, paths) {
+        var n = 0;
+        var startN = 0;
 
         for(n = 0; n < table.table.length; n++) {
-            //Start a path
-            if(currentPercentage === -1 && table.table[n] !== 0) {
-                currentPercentage = table.table[n];
-                sX = this.getRealX(table, n, this.bitDiameter);
-                sY = this.getRealY(table, n, this.bitDiameter);
-                sZ = this.getRealZ(currentPercentage);
+            //Continue the same path
+            if(this.getRealY(table, startN) === this.getRealY(table, n) &&
+                    table.table[startN] === table.table[n]) {
                 continue;
             }
-            //Continue the same path
-            if(sY == this.getRealY(table, n , this.bitDiameter) &&
-                    currentPercentage == table.table[n])
-                continue;
-
-            if(this.hasToBeSmoothed(table.table[n], currentPercentage))
-                endN = n;
-            else
-                endN = n-1;
 
             //Path discontinued
-            this.addPath(paths, sX, sY, sZ,
-                    this.getRealX(table, endN, this.bitDiameter),
-                    this.getRealY(table, endN, this.bitDiameter),
-                    this.getRealZ(table.table[endN]));
-            currentPercentage = -1;
-            if(table.table[n] === 0)
-                continue;
-            n--;  //like that it will go to the previous tests
+            if(table.table[startN] !== 0) {
+                this.addPathFromTable(table, paths, startN, n-1);
+            }
+
+            if(this.getRealY(table, startN) === this.getRealY(table, n) &&
+                this.hasToBeSmoothed(table.table[n-1], table.table[n]))
+            {
+                this.addPathFromTable(table, paths, n-1, n);
+            }
+
+            startN = n;
         }
 
-        if(sX != -1) {  //Because we can miss the last path
-            endN = table.table.length - 1;
-            this.addPath(paths, sX, sY, sZ,
-                    this.getRealX(table, endN, this.bitDiameter),
-                    this.getRealY(table, endN, this.bitDiameter),
-                    this.getRealZ(table.table[endN]));
+        if(table.table[startN] !== 0) {  //Because we can miss the last path
+            this.addPathFromTable(table, paths, startN, n-1);
         }
 
-        return paths;
     },
 
     /**
@@ -224,11 +338,9 @@ var imageToCarving = {
      */
     getGCodeStraight: function(path) {
         var gcode = "";
-        var z = 0;
         var startX = path.start.x.toFixed(5), startY = path.start.y.toFixed(5);
-        // var startZ = path.start.z.toFixed(5);
         var endX = path.end.x.toFixed(5), endY = path.end.y.toFixed(5);
-        //XXX: Check for the Z
+        var startZ = "", endZ = "";
         var maxZ = 0;
         var z1Done = false, z2Done = false;
 
@@ -238,16 +350,16 @@ var imageToCarving = {
             if(maxZ <= path.start.z) {
                 startZ = path.start.z.toFixed(5);
                 z1Done = true;
-            }
-            else
+            } else {
                 startZ = maxZ.toFixed(5);
+            }
 
             if(maxZ <= path.end.z) {
                 endZ = path.end.z.toFixed(5);
                 z2Done = true;
-            }
-            else
+            } else {
                 endZ = maxZ.toFixed(5);
+            }
 
             gcode += "(Go to the start cut position)\n";
             gcode += "G0 Z" + this.safeZ.toFixed(5) + "\n";
@@ -271,8 +383,9 @@ var imageToCarving = {
     getGCodeFromPaths: function(paths) {
         var gcode = "";
         var i = 0;
-        if(paths.length === 0)
+        if(paths.length === 0) {
             return gcode;
+        }
 
         gcode += "G20 (inches)\n";
         gcode += "G0 Z" + this.safeZ.toFixed(5) + "\n";
@@ -293,14 +406,14 @@ var imageToCarving = {
     getGCode: function(image) {
         var table = this.getTablePercentage(image);
         var paths = [];
-        if(this.type == "pixelized")
+        if(this.type === "pixelized") {
             paths = this.getPixelizedPaths(table);
+        }
 
         return this.getGCodeFromPaths(paths);
     }
 };
 
-// TODO: delete all the tests when over
 var myImage = new Image();
 myImage.src = "image.png";
 

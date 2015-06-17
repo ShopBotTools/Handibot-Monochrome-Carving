@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MonoCarv</title>
+</head>
+<body>
+    <h1>Testing with this image:</h1>
+    <img id="image" src="./image.png" alt="image" />
+    <br />
+    <fieldset style="float:left;">
+        <legend>Configuration</legend>
+        <br />
+        <label><input id="pixelToInch" type="text" /> Pixel to inch</label>
+        <br />
+        <label><input id="bitDiameter" type="text" /> bit diameter</label>
+        <br />
+        <label><input id="maxCarvingDepth" type="text" /> max carving depth</label>
+        <br />
+        <label><input id="marginEdge" type="text" />margin edge</label>
+        <br />
+        <label><input id="safeZ" type="text" /> safe Z</label>
+        <br />
+        <label><input id="bitLength" type="text" />bit length</label>
+        <br />
+        <button id="generate">Generate</button>
+    </fieldset>
+    <textarea id="result" name="" cols="30" rows="10"></textarea>
+    <script type="text/javascript" src="./imgtocarv.js"></script>
+    <script type="text/javascript">
+    var theImage = new Image();
+    theImage.src = document.getElementById("image").src;
+    document.getElementById("pixelToInch").value = imageToCarving.pixelToInch;
+    document.getElementById("bitDiameter").value = imageToCarving.bitDiameter;
+    document.getElementById("maxCarvingDepth").value = imageToCarving.maxCarvingDepth;
+    document.getElementById("marginEdge").value = imageToCarving.marginEdge;
+    document.getElementById("safeZ").value = imageToCarving.safeZ;
+    document.getElementById("bitLength").value = imageToCarving.bitLength;
+    document.getElementById("generate").onclick = function() {
+        var gcode = "";
+        imageToCarving.pixelToInch = parseFloat(document.getElementById("pixelToInch").value, 10);
+        imageToCarving.bitDiameter = parseFloat(document.getElementById("bitDiameter").value, 10);
+        imageToCarving.maxCarvingDepth = parseFloat(document.getElementById("maxCarvingDepth").value, 10);
+        imageToCarving.marginEdge = parseFloat(document.getElementById("marginEdge").value, 10);
+        imageToCarving.safeZ = parseFloat(document.getElementById("safeZ").value, 10);
+        imageToCarving.bitLength = parseFloat(document.getElementById("bitLength").value, 10);
+        gcode = imageToCarving.getGCode(theImage);
+        document.getElementById("result").value = gcode;
+    };
+    </script>
+</body>
+</html>

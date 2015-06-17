@@ -33,10 +33,9 @@ function printTable(table) {
 }
 //End testing functions
 
-//TODO: do a margin for the smooth and the hard edge
 //TODO: Explain better what is marginEdge (find a better name too):
 //      the variable represents the percentage where two "pixels" should be
-//      considered as the continuation of a path or completly different.
+//      considered as the continuation of a path or completely different.
 //      Example: One pixel has 0.5 and an other 1. If marginEdge is set to
 //      more than or equal 0.5, the will be a smooth slope between the two pixels
 //      else there will be no slope.
@@ -47,6 +46,12 @@ function printTable(table) {
 //      1  0.5               1  0.5
 //     marginEdge < 0.5   marginEdge >= 0.5
 
+//TODO: Find a better name for "table":
+//      it is supposed to be a map of height variation (in Z) for each
+//      incrementation (in x and y). For example, table[1][2] represents
+//      the height for the position (2 * cellSize; 1 * cellSize) (matrices
+//      doesn't have the same order for coordinates representation
+
 var imageToCarving = {
     pixelToInch : 1,
     bitDiameter : 1,
@@ -54,7 +59,7 @@ var imageToCarving = {
     marginEdge : 0,
     type : "pixelated",
     safeZ : 3,
-    bitLength : 2,
+    bitLength : 0.5,
 
     /**
      * Returns the percentage (0 to 1) of black in the pixel.
@@ -115,7 +120,7 @@ var imageToCarving = {
      *
      * @param {Image()} image The image.
      * @return {object} An object with three members: width (number), height (number),
-     *   table (array of number) wich represents the percentage
+     *   table (array of number) which represents the percentage
      */
     getTablePercentage: function(image) {
         var tab = [];  //TABle for the percentage
@@ -129,7 +134,8 @@ var imageToCarving = {
         if(image.width * this.pixelToInch < this.bitDiameter ||
                 image.height * this.pixelToInch < this.bitDiameter)
         {
-            return { width : 0, height : 0, table : [] };
+            return { width : 0, height : 0,
+                cellSize : this.bitDiameter, table : [] };
         }
 
         var delta = this.bitDiameter / this.pixelToInch;
@@ -144,7 +150,8 @@ var imageToCarving = {
             iTab++;
         }
 
-        return { width : iTab, height : jTab, table : tab };
+        return { width : iTab, height : jTab,
+            cellSize : this.bitDiameter, table : tab };
     },
 
     /**
@@ -155,8 +162,7 @@ var imageToCarving = {
      * @return {number} The X position
      */
     getRealX: function(table, n) {
-        var cellSize = this.bitDiameter;
-        return n % table.width * cellSize + cellSize / 2;
+        return n % table.width * table.cellSize + table.cellSize / 2;
     },
 
     /**
@@ -168,8 +174,8 @@ var imageToCarving = {
      */
     getRealY: function(table, n) {
         //Because screen position is not real, we use table.height
-        var cellSize = this.bitDiameter;
-        return (table.height - 1 - parseInt(n / table.width, 10)) * cellSize + cellSize / 2;
+        var c = table.cellSize;
+        return (table.height - 1 - parseInt(n / table.width, 10)) * c + c / 2;
     },
 
     /**
@@ -245,6 +251,7 @@ var imageToCarving = {
         var paths = [];
         this.getPixelatedPathsLeftToRight(table, paths);
         this.getPixelatedPathsUpToDown(table, paths);
+        printPaths(paths);
         return paths;
     },
 
@@ -401,12 +408,17 @@ var imageToCarving = {
         gcode += "(Go to the initial position)\n";
         gcode += "G0 Z" + this.safeZ.toFixed(5) + "\n";
         gcode += "G0 X0 Y0\n";
+        gcode += "M05\n";
+        gcode += "M02\n";
         return gcode;
     },
 
     getGCode: function(image) {
         var table = this.getTablePercentage(image);
         var paths = [];
+        if(table.width === 0 || table.height === 0) {
+            return "";
+        }
         if(this.type === "pixelated") {
             paths = this.getPixelatedPaths(table);
         }
@@ -415,10 +427,10 @@ var imageToCarving = {
     }
 };
 
-var myImage = new Image();
-myImage.src = "image.png";
-
+// var myImage = new Image();
+// myImage.src = "image.png";
 // myImage.src = "path3342.png";
+
 // var canvas = document.createElement('canvas');
 // canvas.width = myImage.width;
 // canvas.height = myImage.height;
@@ -440,6 +452,6 @@ myImage.src = "image.png";
 
 // var table = imageToCarving.getTablePercentage(myImage, 1, 2);
 // console.log(imageToCarving.getPixelatedPaths(table));
-imageToCarving.marginEdge = 1;
-imageToCarving.bitLength = 0.1;
-console.log(imageToCarving.getGCode(myImage));
+// imageToCarving.marginEdge = 1;
+// imageToCarving.bitLength = 0.1;
+// console.log(imageToCarving.getGCode(myImage));

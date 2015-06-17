@@ -238,70 +238,53 @@ var imageToCarving = {
     getPixelizedPaths: function(table) {
         var paths = [];
         this.getPixelizedPathsLeftToRight(table, paths);
-        // this.getPixelizedPathsUpToDown(table, paths);
-        printTable(table);
-        printPaths(paths);
+        this.getPixelizedPathsUpToDown(table, paths);
         return paths;
     },
 
     getPixelizedPathsUpToDown: function(table, paths) {
-        var sX = -1, sY = -1, sZ = -1, endN; //Start point
-        var currentPercentage = -1;
-        var n, j;
+        var n = 0, startN = 0, i = 0, j = 0, pN = 0;  //PreviousN
 
         for(j = 0; j < table.width; j++) {
-            for(n = j; n < table.table.length; n+=table.width) {
-                //Start a path
-                if(currentPercentage === -1 && table.table[n] !== 0) {
-                    currentPercentage = table.table[n];
-                    sX = this.getRealX(table, n);
-                    sY = this.getRealY(table, n);
-                    sZ = this.getRealZ(currentPercentage);
-                    continue;
-                }
-                //Continue the same path
-                if(sY === this.getRealX(table, n , this.bitDiameter) &&
-                        currentPercentage === table.table[n]) {
-                    continue;
-                }
+            for(i = 0; i < table.height; i++) {
+                n = this.getIndexTable(table, i, j);
 
-                if(this.hasToBeSmoothed(table.table[n], currentPercentage)) {
-                    endN = n;
-                } else {
-                    endN = n-table.width;
+                //Continue the same path
+                if(this.getRealX(table, startN) === this.getRealX(table, n) &&
+                        table.table[startN] === table.table[n]) {
+                    continue;
                 }
 
                 //Path discontinued
-                this.addPath(paths, sX, sY, sZ,
-                        this.getRealX(table, endN),
-                        this.getRealY(table, endN),
-                        this.getRealZ(table.table[endN]));
-                currentPercentage = -1;
-                if(table.table[n] === 0) {
-                    continue;
+                if(i === 0) {
+                    pN = this.getIndexTable(table, table.width-1, j-1);
+                } else {
+                    pN = this.getIndexTable(table, i-1, j);
                 }
-                n-=table.width;  //like that it will go to the previous tests
+
+                if(table.table[startN] !== 0) {
+                    this.addPathFromTable(table, paths, startN, pN);
+                }
+
+                if(this.getRealX(table, startN) === this.getRealX(table, n) &&
+                        this.hasToBeSmoothed(table.table[pN], table.table[n]))
+                {
+                    this.addPathFromTable(table, paths, pN, n);
+                }
+
+                startN = n;
             }
-            if(sX !== -1) {  //Because we can miss the last path
-                endN = n - table.width;
-                this.addPath(paths, sX, sY, sZ,
-                        this.getRealX(table, endN),
-                        this.getRealY(table, endN),
-                        this.getRealZ(table.table[endN]));
-            }
+
         }
-        if(sX !== -1) {  //Because we can miss the last path
-            endN = n - table.width;
-            this.addPath(paths, sX, sY, sZ,
-                    this.getRealX(table, endN),
-                    this.getRealY(table, endN),
-                    this.getRealZ(table.table[endN]));
+
+        if(table.table[startN] !== 0) {  //Because we can miss the last path
+            this.addPathFromTable(table, paths, startN,
+                    this.getIndexTable(table, j-1, i-1));
         }
     },
 
     getPixelizedPathsLeftToRight: function(table, paths) {
-        var n = 0;
-        var startN = 0;
+        var n = 0, startN = 0;
 
         for(n = 0; n < table.table.length; n++) {
             //Continue the same path

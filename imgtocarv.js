@@ -52,7 +52,7 @@ var imageToCarving = {
     bitDiameter : 1,
     maxCarvingDepth : 1,
     marginEdge : 0,
-    type : "pixelized",
+    type : "pixelated",
     safeZ : 3,
     bitLength : 2,
 
@@ -234,15 +234,27 @@ var imageToCarving = {
         return j + i * table.width;
     },
 
-    //Do a stupid path like a printer  (doing it recursively?)
-    getPixelizedPaths: function(table) {
+    /**
+     * Generate the paths (very pixelated) according to the percentage table.
+     * More or less acts like a printer.
+     *
+     * @param {object} table The percentage table
+     * @param {object} path The path.
+     */
+    getPixelatedPaths: function(table) {
         var paths = [];
-        this.getPixelizedPathsLeftToRight(table, paths);
-        this.getPixelizedPathsUpToDown(table, paths);
+        this.getPixelatedPathsLeftToRight(table, paths);
+        this.getPixelatedPathsUpToDown(table, paths);
         return paths;
     },
 
-    getPixelizedPathsUpToDown: function(table, paths) {
+    /**
+     * Generate the paths (up to down) according to the percentage table.
+     *
+     * @param {object} table The percentage table
+     * @param {object} path The path.
+     */
+    getPixelatedPathsUpToDown: function(table, paths) {
         var n = 0, startN = 0, i = 0, j = 0, pN = 0;  //PreviousN
 
         for(j = 0; j < table.width; j++) {
@@ -283,7 +295,13 @@ var imageToCarving = {
         }
     },
 
-    getPixelizedPathsLeftToRight: function(table, paths) {
+    /**
+     * Generate the paths (left to right) according to the percentage table.
+     *
+     * @param {object} table The percentage table
+     * @param {object} path The path.
+     */
+    getPixelatedPathsLeftToRight: function(table, paths) {
         var n = 0, startN = 0;
 
         for(n = 0; n < table.table.length; n++) {
@@ -389,8 +407,8 @@ var imageToCarving = {
     getGCode: function(image) {
         var table = this.getTablePercentage(image);
         var paths = [];
-        if(this.type === "pixelized") {
-            paths = this.getPixelizedPaths(table);
+        if(this.type === "pixelated") {
+            paths = this.getPixelatedPaths(table);
         }
 
         return this.getGCodeFromPaths(paths);
@@ -421,7 +439,7 @@ myImage.src = "image.png";
 // console.log(imageToCarving.getTablePercentage(myImage));
 
 // var table = imageToCarving.getTablePercentage(myImage, 1, 2);
-// console.log(imageToCarving.getPixelizedPaths(table));
+// console.log(imageToCarving.getPixelatedPaths(table));
 imageToCarving.marginEdge = 1;
 imageToCarving.bitLength = 0.1;
 console.log(imageToCarving.getGCode(myImage));

@@ -40,7 +40,6 @@ function generateImage(canvas, image) {
     canvas.height = table.height;
     var ctx = canvas.getContext('2d');
     var imageData = ctx.createImageData(table.width, table.height);
-    console.log(imageData);
 
     for(i=0; i < table.table.length; i++) {
         index = i * 4;
@@ -50,7 +49,6 @@ function generateImage(canvas, image) {
         imageData.data[index+3] = 255;
     }
     ctx.putImageData(imageData, 0, 0);
-    console.log("Shown");
 }
 //End testing functions
 
@@ -107,28 +105,28 @@ var imageToCarving = {
      * @param {Image data} imageData The image data.
      * @param {number} iStart The start line number (include).
      * @param {number} jStart The start column number (include).
-     * @param {number} iEnd The end line number (exclude).
-     * @param {number} jEnd The end column number (exclude).
+     * @param {number} iEnd The end line number (include).
+     * @param {number} jEnd The end column number (include).
      * @return {number} The percentage (0 to 1) of black in the area.
      */
     getAverage: function(imageData, iStart, jStart, iEnd, jEnd) {
-        var sum = 0, count = 0, i = 0, j = 0;
+        var sum = 0, count = 0, i = 0, j = 0, temp = 0;
 
         //swapping
         if(iStart > iEnd) {
-            iStart = iStart + iEnd;
-            iEnd = iStart - iEnd;
-            iStart = iStart - iEnd;
+            temp = iEnd;
+            iEnd = iStart;
+            iStart = temp;
         }
 
         if(jStart > jEnd) {
-            jStart = jStart + jEnd;
-            jEnd = jStart - jEnd;
-            jStart = jStart - jEnd;
+            temp = jEnd;
+            jEnd = jStart;
+            jStart = temp;
         }
 
-        for(i=iStart; i < imageData.width && i < iEnd; i++) {
-            for(j=jStart; j < imageData.height && j < jEnd; j++) {
+        for(i=iStart; i < imageData.width && i <= iEnd; i++) {
+            for(j=jStart; j < imageData.height && j <= jEnd; j++) {
                 sum += this.getPercentage(imageData, i, j);
                 count++;
             }
@@ -146,6 +144,8 @@ var imageToCarving = {
      *   table (array of number) which represents the percentage
      */
     getTablePercentage: function(image) {
+        //FIXME: there is a bug here, the percentage don't correspond to the image
+        //the X is messed up
         var tab = [];  //TABle for the percentage
         var canvas = document.createElement('canvas');
         canvas.width = image.width;
@@ -162,18 +162,26 @@ var imageToCarving = {
         }
 
         var delta = this.bitDiameter / this.pixelToInch;
-        var iPx = 0, jPx = 0, iTab = 0, jTab = 0;
+        console.log("delta = " + delta);
+        var iPx = 0, jPx = 0, tableWidth = 0, tableHeight = 0;
 
+        console.log(delta - parseInt(delta, 10) > 0);
+        console.log("image.height: " + image.height + " image.width: " + image.width);
         for(iPx=0; iPx < image.width; iPx+=delta) {
-            jTab = 0;
+            tableHeight = 0;
             for(jPx=0; jPx < image.height; jPx+=delta) {
-                tab.push(this.getAverage(imageData, iPx, jPx, iPx+delta, jPx+delta));
-                jTab++;
+                if(delta - parseInt(delta, 10) > 0) {
+                    tab.push(this.getAverage(imageData, iPx, jPx, iPx+delta, jPx+delta));
+                } else {
+                    tab.push(this.getAverage(imageData, iPx, jPx, iPx+delta-1, jPx+delta-1));
+                }
+
+                tableHeight++;
             }
-            iTab++;
+            tableWidth++;
         }
 
-        return { width : iTab, height : jTab,
+        return { width : tableWidth, height : tableHeight,
             cellSize : this.bitDiameter, table : tab };
     },
 

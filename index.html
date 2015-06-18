@@ -3,10 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <title>MonoCarv</title>
+    <style type="text/css">
+        img {
+            border: 1px solid red;
+        }
+    </style>
 </head>
 <body>
     <h1>Testing with this image:</h1>
-    <img id="image" src="./image.png" alt="image" />
+    <img id="image" src="./tests_paths.png" alt="image" />
+    <!-- <img id="image" src="./e.png" alt="image" /> -->
+    <!-- <img id="image" src="./sélection_001.png" alt="image" /> -->
     <br />
     <fieldset style="float:left;">
         <legend>Configuration</legend>
@@ -26,8 +33,14 @@
         <button id="generate">Generate</button>
     </fieldset>
     <textarea id="result" name="" cols="30" rows="10"></textarea>
+    <fieldset>
+        <legend>Percentages result</legend>
+        <canvas id="canvas"></canvas>
+        <button id="percentage">Generate</button>
+    </fieldset>
     <script type="text/javascript" src="./imgtocarv.js"></script>
     <script type="text/javascript">
+    document.getElementById("result").value = "";
     var theImage = new Image();
     theImage.src = document.getElementById("image").src;
     document.getElementById("pixelToInch").value = imageToCarving.pixelToInch;
@@ -46,7 +59,15 @@
         imageToCarving.bitLength = parseFloat(document.getElementById("bitLength").value, 10);
         gcode = imageToCarving.getGCode(theImage);
         document.getElementById("result").value = gcode;
+        if(gcode === "") {
+            alert("Nothing generated");
+        }
     };
+
+
+    document.getElementById("percentage").onclick = function() {
+        generateImage(document.getElementById("canvas"), theImage);
+    }
     </script>
 </body>
 </html>

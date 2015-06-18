@@ -31,6 +31,27 @@ function printTable(table) {
     }
     console.log(str);
 }
+
+//Generate the image on the canvas
+function generateImage(canvas, image) {
+    var i = 0, index = 0;
+    var table = imageToCarving.getTablePercentage(image);
+    canvas.width = table.width;
+    canvas.height = table.height;
+    var ctx = canvas.getContext('2d');
+    var imageData = ctx.createImageData(table.width, table.height);
+    console.log(imageData);
+
+    for(i=0; i < table.table.length; i++) {
+        index = i * 4;
+        imageData.data[index]   = (1-table.table[i]) * 255;
+        imageData.data[index+1] = (1-table.table[i]) * 255;
+        imageData.data[index+2] = (1-table.table[i]) * 255;
+        imageData.data[index+3] = 255;
+    }
+    ctx.putImageData(imageData, 0, 0);
+    console.log("Shown");
+}
 //End testing functions
 
 //TODO: Explain better what is marginEdge (find a better name too):
@@ -72,7 +93,9 @@ var imageToCarving = {
     getPercentage: function(imageData, i, j) {
         //1 px = [R, G, B, A]
         var px = parseInt(i, 10) * imageData.width * 4 + parseInt(j, 10) * 4;
-        if(px >= imageData.data.length) {
+
+        //NOTE: do we should include the transparency in the process?
+        if(px >= imageData.data.length || imageData.data[px+3] !== 255) {
             return 0;
         }
         return 1 - (imageData.data[px] / 255);  //Assuming R = G = B
@@ -162,7 +185,7 @@ var imageToCarving = {
      * @return {number} The X position
      */
     getRealX: function(table, n) {
-        return n % table.width * table.cellSize + table.cellSize / 2;
+        return (n % table.width) * table.cellSize + table.cellSize / 2;
     },
 
     /**
@@ -226,6 +249,17 @@ var imageToCarving = {
      * @param {number} b The a index in the percentages table.
      */
     addPathFromTable: function(table, paths, a, b) {
+        if(paths.length < 3) {
+            console.log("a : " + a + ", b : " + b);
+            console.log("this.addPath(paths,");
+            console.log("    "+this.getRealX(table, a)+",");
+            console.log("    "+this.getRealY(table, a)+",");
+            console.log("    "+this.getRealZ(table.table[a])+",");
+            console.log("    "+this.getRealX(table, b)+",");
+            console.log("    "+this.getRealY(table, b)+",");
+            console.log("    "+this.getRealZ(table.table[b]));
+            console.log(");");
+        }
         this.addPath(paths,
             this.getRealX(table, a),
             this.getRealY(table, a),
@@ -250,7 +284,8 @@ var imageToCarving = {
     getPixelatedPaths: function(table) {
         var paths = [];
         this.getPixelatedPathsLeftToRight(table, paths);
-        this.getPixelatedPathsUpToDown(table, paths);
+        // this.getPixelatedPathsUpToDown(table, paths);
+        // printTable(table);
         printPaths(paths);
         return paths;
     },
@@ -353,6 +388,7 @@ var imageToCarving = {
         var z1Done = false, z2Done = false;
 
         //Have to do multiple passes because of the height of the bit
+        gcode += "(Cutting one pass)\n";
         do {
             maxZ -= this.bitLength;  //The maximum we can go deep in this pass
             if(maxZ <= path.start.z) {
@@ -369,15 +405,14 @@ var imageToCarving = {
                 endZ = maxZ.toFixed(5);
             }
 
-            gcode += "(Go to the start cut position)\n";
             gcode += "G0 Z" + this.safeZ.toFixed(5) + "\n";
-            gcode += "G0 X" + startX + " Y" + startY + "\n";
+            gcode += "G0 X" + startX + " Y" + startY + " (start XY)" + "\n";
 
-            gcode += "(Cutting one pass)\n";
-            gcode += "G1 Z" + startZ + "\n";
-            gcode += "G1 X" + endX + " Y" + endY + " Z" + endZ + "\n";
+            gcode += "G1 Z" + startZ +  " (start Z)" +"\n";
+            gcode += "G1 X" + endX + " Y" + endY + " Z" + endZ + "(end)" + "\n";
         } while(z1Done === false || z2Done === false);
         gcode += "G0 Z" + this.safeZ.toFixed(5) + "\n";
+        gcode += "(End cutting one pass)\n";
 
         return gcode;
     },
@@ -395,7 +430,11 @@ var imageToCarving = {
             return gcode;
         }
 
+        //TODO: work on the initialization
         gcode += "G20 (inches)\n";
+        gcode += "G17 (XY plane for circular interpolation)\n";
+        gcode += "G21 G90 G64 G40\n";
+
         gcode += "G0 Z" + this.safeZ.toFixed(5) + "\n";
         gcode += "M3 (Spindle on clock wise)\n";
 

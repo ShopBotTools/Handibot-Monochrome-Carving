@@ -90,7 +90,7 @@ var imageToCarving = {
      */
     getPercentage: function(imageData, i, j) {
         //1 px = [R, G, B, A]
-        var px = parseInt(i, 10) * imageData.width * 4 + parseInt(j, 10) * 4;
+        var px = (parseInt(i, 10) * imageData.width + parseInt(j, 10)) * 4;
 
         //NOTE: do we should include the transparency in the process?
         if(px >= imageData.data.length || imageData.data[px+3] !== 255) {
@@ -125,8 +125,8 @@ var imageToCarving = {
             jStart = temp;
         }
 
-        for(i=iStart; i < imageData.width && i <= iEnd; i++) {
-            for(j=jStart; j < imageData.height && j <= jEnd; j++) {
+        for(i=iStart; i < imageData.height && i <= iEnd; i++) {
+            for(j=jStart; j < imageData.width && j <= jEnd; j++) {
                 sum += this.getPercentage(imageData, i, j);
                 count++;
             }
@@ -162,24 +162,19 @@ var imageToCarving = {
         }
 
         var delta = this.bitDiameter / this.pixelToInch;
-        console.log("delta = " + delta);
         var iPx = 0, jPx = 0, tableWidth = 0, tableHeight = 0;
 
-        console.log(delta - parseInt(delta, 10) > 0);
-        console.log("image.height: " + image.height + " image.width: " + image.width);
-        for(iPx=0; iPx < image.width; iPx+=delta) {
-            tableHeight = 0;
-            for(jPx=0; jPx < image.height; jPx+=delta) {
+        for(iPx=0; iPx < image.height; iPx+=delta) {
+            for(jPx=0; jPx < image.width; jPx+=delta) {
                 if(delta - parseInt(delta, 10) > 0) {
                     tab.push(this.getAverage(imageData, iPx, jPx, iPx+delta, jPx+delta));
                 } else {
                     tab.push(this.getAverage(imageData, iPx, jPx, iPx+delta-1, jPx+delta-1));
                 }
-
-                tableHeight++;
             }
-            tableWidth++;
         }
+        tableHeight = parseInt(iPx / delta, 10);
+        tableWidth = parseInt(jPx / delta, 10);
 
         return { width : tableWidth, height : tableHeight,
             cellSize : this.bitDiameter, table : tab };
@@ -257,17 +252,6 @@ var imageToCarving = {
      * @param {number} b The a index in the percentages table.
      */
     addPathFromTable: function(table, paths, a, b) {
-        if(paths.length < 3) {
-            console.log("a : " + a + ", b : " + b);
-            console.log("this.addPath(paths,");
-            console.log("    "+this.getRealX(table, a)+",");
-            console.log("    "+this.getRealY(table, a)+",");
-            console.log("    "+this.getRealZ(table.table[a])+",");
-            console.log("    "+this.getRealX(table, b)+",");
-            console.log("    "+this.getRealY(table, b)+",");
-            console.log("    "+this.getRealZ(table.table[b]));
-            console.log(");");
-        }
         this.addPath(paths,
             this.getRealX(table, a),
             this.getRealY(table, a),

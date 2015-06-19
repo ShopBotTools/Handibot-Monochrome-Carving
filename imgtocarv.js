@@ -144,8 +144,6 @@ var imageToCarving = {
      *   table (array of number) which represents the percentage
      */
     getTablePercentage: function(image) {
-        //FIXME: there is a bug here, the percentage don't correspond to the image
-        //the X is messed up
         var tab = [];  //TABle for the percentage
         var canvas = document.createElement('canvas');
         canvas.width = image.width;
@@ -276,9 +274,7 @@ var imageToCarving = {
     getPixelatedPaths: function(table) {
         var paths = [];
         this.getPixelatedPathsLeftToRight(table, paths);
-        // this.getPixelatedPathsUpToDown(table, paths);
-        // printTable(table);
-        printPaths(paths);
+        this.getPixelatedPathsUpToDown(table, paths);
         return paths;
     },
 
@@ -457,32 +453,3 @@ var imageToCarving = {
         return this.getGCodeFromPaths(paths);
     }
 };
-
-// var myImage = new Image();
-// myImage.src = "image.png";
-// myImage.src = "path3342.png";
-
-// var canvas = document.createElement('canvas');
-// canvas.width = myImage.width;
-// canvas.height = myImage.height;
-// var context = canvas.getContext('2d');
-// context.drawImage(myImage, 0, 0);
-// var imageData = context.getImageData(0, 0, myImage.width, myImage.height);
-// var pixels = context.getImageData(0, 0, myImage.width, myImage.height).data;
-
-
-// imageToCarving.pixelToInch = 1;
-// imageToCarving.bitDiameter = 0.5;
-// console.log(imageToCarving.getTablePercentage(myImage));
-// imageToCarving.pixelToInch = 1;
-// imageToCarving.bitDiameter = 1;
-// console.log(imageToCarving.getTablePercentage(myImage));
-// imageToCarving.pixelToInch = 1;
-// imageToCarving.bitDiameter = 2;
-// console.log(imageToCarving.getTablePercentage(myImage));
-
-// var table = imageToCarving.getTablePercentage(myImage, 1, 2);
-// console.log(imageToCarving.getPixelatedPaths(table));
-// imageToCarving.marginEdge = 1;
-// imageToCarving.bitLength = 0.1;
-// console.log(imageToCarving.getGCode(myImage));

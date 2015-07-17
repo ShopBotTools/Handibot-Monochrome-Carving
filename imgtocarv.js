@@ -76,9 +76,12 @@ var imageToCarving = {
     bitDiameter : 1,
     maxCarvingDepth : 1,
     marginEdge : 0,
-    type : "pixelated",
     safeZ : 3,
     bitLength : 0.5,
+    type : 0,
+
+    SIMPLE_PIXELATED : 0,
+    COMPLEX_PIXELATED: 1,
 
     /**
      * Returns the percentage (0 to 1) of black in the pixel.
@@ -269,12 +272,15 @@ var imageToCarving = {
      * More or less acts like a printer.
      *
      * @param {object} table The percentage table
+     * @param {boolean} upToDown If it should be up to down too.
      * @param {object} path The path.
      */
-    getPixelatedPaths: function(table) {
+    getPixelatedPaths: function(table, upToDown) {
         var paths = [];
         this.getPixelatedPathsLeftToRight(table, paths);
-        this.getPixelatedPathsUpToDown(table, paths);
+        if(typeof upToDown !== "undefined" && upToDown === true) {
+            this.getPixelatedPathsUpToDown(table, paths);
+        }
         return paths;
     },
 
@@ -363,7 +369,8 @@ var imageToCarving = {
 
     /**
      * Generate GCode for cutting from the start point to the end point.
-     *
+     * Should be in safe Z before calling this function. End the cut by putting
+     * the bit in safe Z.
      * @param {object} path The path.
      * @return {string} The Gcode for this cut
      */
@@ -393,14 +400,14 @@ var imageToCarving = {
                 endZ = maxZ.toFixed(5);
             }
 
-            gcode += "G0 Z" + this.safeZ.toFixed(5) + "\n";
             gcode += "G0 X" + startX + " Y" + startY + " (start XY)" + "\n";
 
             gcode += "G1 Z" + startZ +  " (start Z)" +"\n";
             gcode += "G1 X" + endX + " Y" + endY + " Z" + endZ + "(end)" + "\n";
+            gcode += "G0 Z" + this.safeZ.toFixed(5) + "\n";
         } while(z1Done === false || z2Done === false);
-        gcode += "G0 Z" + this.safeZ.toFixed(5) + "\n";
         gcode += "(End cutting one pass)\n";
+        // gcode += "G0 Z" + this.safeZ.toFixed(5) + "\n";
 
         return gcode;
     },
@@ -421,7 +428,7 @@ var imageToCarving = {
         //TODO: work on the initialization
         gcode += "G20 (inches)\n";
         gcode += "G17 (XY plane for circular interpolation)\n";
-        gcode += "G21 G90 G64 G40\n";
+        gcode += "G90 (absolute)\n G64 G40\n";
 
         gcode += "G0 Z" + this.safeZ.toFixed(5) + "\n";
         gcode += "M3 (Spindle on clock wise)\n";
@@ -433,7 +440,7 @@ var imageToCarving = {
         gcode += "M8 (Spindle off)\n";
 
         gcode += "(Go to the initial position)\n";
-        gcode += "G0 Z" + this.safeZ.toFixed(5) + "\n";
+        // gcode += "G0 Z" + this.safeZ.toFixed(5) + "\n";
         gcode += "G0 X0 Y0\n";
         gcode += "M05\n";
         gcode += "M02\n";
@@ -446,8 +453,10 @@ var imageToCarving = {
         if(table.width === 0 || table.height === 0) {
             return "";
         }
-        if(this.type === "pixelated") {
+        if(this.type === this.SIMPLE_PIXELATED) {
             paths = this.getPixelatedPaths(table);
+        } else if(this.type === this.COMPLEX_PIXELATED) {
+            paths = this.getPixelatedPaths(table, true);
         }
 
         return this.getGCodeFromPaths(paths);

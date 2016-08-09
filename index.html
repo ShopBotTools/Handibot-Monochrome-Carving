@@ -11,9 +11,13 @@
 </head>
 <body>
     <h1>Testing with this image:</h1>
-    <!-- <img id="image" src="./tests_paths.png" alt="image" /> -->
-    <!-- <img id="image" src="./e.png" alt="image" /> -->
-    <img id="image" src="./knight.png" alt="image" />
+    <fieldset>
+        <legend>Image</legend>
+        <input id="image-file" type="file" >
+        <button id="image-upload">Upload image</button>
+        <br />
+        <img id="image" src="" alt="image" />
+    </fieldset>
     <br />
     <fieldset style="float:left;">
         <legend>Configuration</legend>
@@ -67,6 +71,23 @@
 
     document.getElementById("percentage").onclick = function() {
         generateImage(document.getElementById("canvas"), theImage);
+    }
+
+    document.getElementById("image-upload").onclick = function() {
+        var element = document.getElementById("image-file");
+        var file = element.files[0];
+        var reader = new FileReader();
+
+        reader.onloadend = function() {
+            theImage = new Image();
+            theImage.src = reader.result;
+            document.getElementById("image").src = reader.result;
+        };
+
+        if(file != null)
+            reader.readAsDataURL(file);
+        else
+            alert("No file.");
     }
     </script>
 </body>

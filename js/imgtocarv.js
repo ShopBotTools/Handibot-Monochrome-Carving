@@ -1,56 +1,9 @@
 /*jslint todo: true, browser: true, continue: true */
+/*global FileReader*/
+
 /**
  * Written by Alex Canales for ShopBotTools, Inc.
  */
-
-//TODO: delete these functions:
-//Testing functions
-function printPaths(paths) {
-    var i = 0;
-    var str = "";
-    for(i = 0; i < paths.length; i++) {
-        str += i + "    ";
-        str += "("+paths[i].start.x+";"+paths[i].start.y+";"+paths[i].start.z+")";
-        str += " => ";
-        str += "("+paths[i].end.x+";"+paths[i].end.y+";"+paths[i].end.z+")";
-        str += "\n";
-    }
-    console.log(str);
-}
-
-function printTable(table) {
-    var i = 0;
-    var str = "";
-    for(i = 0; i < table.table.length; i++) {
-        str += table.table[i];
-        if((i+1) % table.width !== 0) {
-            str += " ";
-        } else {
-            str += "\n";
-        }
-    }
-    console.log(str);
-}
-
-//Generate the image on the canvas
-function generateImage(canvas, image) {
-    var i = 0, index = 0;
-    var table = imageToCarving.getTablePercentage(image);
-    canvas.width = table.width;
-    canvas.height = table.height;
-    var ctx = canvas.getContext('2d');
-    var imageData = ctx.createImageData(table.width, table.height);
-
-    for(i=0; i < table.table.length; i++) {
-        index = i * 4;
-        imageData.data[index]   = (1-table.table[i]) * 255;
-        imageData.data[index+1] = (1-table.table[i]) * 255;
-        imageData.data[index+2] = (1-table.table[i]) * 255;
-        imageData.data[index+3] = 255;
-    }
-    ctx.putImageData(imageData, 0, 0);
-}
-//End testing functions
 
 //TODO: Explain better what is marginEdge (find a better name too):
 //      the variable represents the percentage where two "pixels" should be
@@ -278,7 +231,7 @@ var imageToCarving = {
     getPixelatedPaths: function(table, upToDown) {
         var paths = [];
         this.getPixelatedPathsLeftToRight(table, paths);
-        if(typeof upToDown !== "undefined" && upToDown === true) {
+        if(upToDown !== undefined && upToDown === true) {
             this.getPixelatedPathsUpToDown(table, paths);
         }
         return paths;
@@ -425,7 +378,7 @@ var imageToCarving = {
             return gcode;
         }
 
-        //TODO: work on the initialization
+        //TODO: work on the initialization (put feed rate)
         gcode += "G20 (inches)\n";
         gcode += "G17 (XY plane for circular interpolation)\n";
         gcode += "G90 (absolute)\n G64 G40\n";
@@ -463,6 +416,25 @@ var imageToCarving = {
     }
 };
 
+//Generate the grayscale image on the canvas
+function generateGrayscaleImage(canvas, image) {
+    var i = 0, index = 0;
+    var table = imageToCarving.getTablePercentage(image);
+    canvas.width = table.width;
+    canvas.height = table.height;
+    var ctx = canvas.getContext('2d');
+    var imageData = ctx.createImageData(table.width, table.height);
+
+    for(i=0; i < table.table.length; i++) {
+        index = i * 4;
+        imageData.data[index]   = (1-table.table[i]) * 255;
+        imageData.data[index+1] = (1-table.table[i]) * 255;
+        imageData.data[index+2] = (1-table.table[i]) * 255;
+        imageData.data[index+3] = 255;
+    }
+    ctx.putImageData(imageData, 0, 0);
+}
+
 document.getElementById("result").value = "";
 var theImage = new Image();
 theImage.src = document.getElementById("image").src;
@@ -489,8 +461,8 @@ document.getElementById("generate").onclick = function() {
 
 
 document.getElementById("percentage").onclick = function() {
-    generateImage(document.getElementById("canvas"), theImage);
-}
+    generateGrayscaleImage(document.getElementById("canvas"), theImage);
+};
 
 document.getElementById("image-upload").onclick = function() {
     var element = document.getElementById("image-file");
@@ -503,9 +475,10 @@ document.getElementById("image-upload").onclick = function() {
         document.getElementById("image").src = reader.result;
     };
 
-    if(file != null)
+    if(file !== null) {
         reader.readAsDataURL(file);
-    else
+    } else {
         alert("No file.");
-}
+    }
+};
 

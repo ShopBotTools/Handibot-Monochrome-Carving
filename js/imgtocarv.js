@@ -462,3 +462,50 @@ var imageToCarving = {
         return this.getGCodeFromPaths(paths);
     }
 };
+
+document.getElementById("result").value = "";
+var theImage = new Image();
+theImage.src = document.getElementById("image").src;
+document.getElementById("pixelToInch").value = imageToCarving.pixelToInch;
+document.getElementById("bitDiameter").value = imageToCarving.bitDiameter;
+document.getElementById("maxCarvingDepth").value = imageToCarving.maxCarvingDepth;
+document.getElementById("marginEdge").value = imageToCarving.marginEdge;
+document.getElementById("safeZ").value = imageToCarving.safeZ;
+document.getElementById("bitLength").value = imageToCarving.bitLength;
+document.getElementById("generate").onclick = function() {
+    var gcode = "";
+    imageToCarving.pixelToInch = parseFloat(document.getElementById("pixelToInch").value, 10);
+    imageToCarving.bitDiameter = parseFloat(document.getElementById("bitDiameter").value, 10);
+    imageToCarving.maxCarvingDepth = parseFloat(document.getElementById("maxCarvingDepth").value, 10);
+    imageToCarving.marginEdge = parseFloat(document.getElementById("marginEdge").value, 10);
+    imageToCarving.safeZ = parseFloat(document.getElementById("safeZ").value, 10);
+    imageToCarving.bitLength = parseFloat(document.getElementById("bitLength").value, 10);
+    gcode = imageToCarving.getGCode(theImage);
+    document.getElementById("result").value = gcode;
+    if(gcode === "") {
+        alert("Nothing generated");
+    }
+};
+
+
+document.getElementById("percentage").onclick = function() {
+    generateImage(document.getElementById("canvas"), theImage);
+}
+
+document.getElementById("image-upload").onclick = function() {
+    var element = document.getElementById("image-file");
+    var file = element.files[0];
+    var reader = new FileReader();
+
+    reader.onloadend = function() {
+        theImage = new Image();
+        theImage.src = reader.result;
+        document.getElementById("image").src = reader.result;
+    };
+
+    if(file != null)
+        reader.readAsDataURL(file);
+    else
+        alert("No file.");
+}
+

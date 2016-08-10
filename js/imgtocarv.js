@@ -26,11 +26,12 @@
 
 var imageToCarving = {
     pixelToInch : 1,
-    bitDiameter : 1,
     maxCarvingDepth : 1,
     marginEdge : 0,
     safeZ : 3,
+    bitDiameter : 1,
     bitLength : 0.5,
+    feedrate : 120,
     type : 0,
 
     SIMPLE_PIXELATED : 0,
@@ -355,7 +356,7 @@ var imageToCarving = {
 
             gcode += "G0 X" + startX + " Y" + startY + " (start XY)" + "\n";
 
-            gcode += "G1 Z" + startZ +  " (start Z)" +"\n";
+            gcode += "G1 Z" + startZ + " F" + this.feedrate.toFixed(5) +  " (start Z)" +"\n";
             gcode += "G1 X" + endX + " Y" + endY + " Z" + endZ + "(end)" + "\n";
             gcode += "G0 Z" + this.safeZ.toFixed(5) + "\n";
         } while(z1Done === false || z2Done === false);
@@ -378,11 +379,12 @@ var imageToCarving = {
             return gcode;
         }
 
-        //TODO: work on the initialization (put feed rate)
+        //TODO: work on the initialization (put feed rate for G1 commands)
         gcode += "G20 (inches)\n";
         gcode += "G17 (XY plane for circular interpolation)\n";
-        gcode += "G90 (absolute)\n G64 G40\n";
+        gcode += "G90 (absolute)\n";
 
+        // gcode += "G0 Z" + this.safeZ.toFixed(5) + " F" + this.feedrate.toFixed(5) + "\n";
         gcode += "G0 Z" + this.safeZ.toFixed(5) + "\n";
         gcode += "M3 (Spindle on clock wise)\n";
 
@@ -438,24 +440,28 @@ function generateGrayscaleImage(canvas, image) {
 document.getElementById("result").value = "";
 var theImage = new Image();
 theImage.src = document.getElementById("image").src;
+
 document.getElementById("pixelToInch").value = imageToCarving.pixelToInch;
 document.getElementById("bitDiameter").value = imageToCarving.bitDiameter;
 document.getElementById("maxCarvingDepth").value = imageToCarving.maxCarvingDepth;
 document.getElementById("marginEdge").value = imageToCarving.marginEdge;
 document.getElementById("safeZ").value = imageToCarving.safeZ;
 document.getElementById("bitLength").value = imageToCarving.bitLength;
+document.getElementById("feedrate").value = imageToCarving.feedrate;
+
 document.getElementById("generate").onclick = function() {
     var gcode = "";
     imageToCarving.pixelToInch = parseFloat(document.getElementById("pixelToInch").value, 10);
-    imageToCarving.bitDiameter = parseFloat(document.getElementById("bitDiameter").value, 10);
     imageToCarving.maxCarvingDepth = parseFloat(document.getElementById("maxCarvingDepth").value, 10);
     imageToCarving.marginEdge = parseFloat(document.getElementById("marginEdge").value, 10);
     imageToCarving.safeZ = parseFloat(document.getElementById("safeZ").value, 10);
+    imageToCarving.bitDiameter = parseFloat(document.getElementById("bitDiameter").value, 10);
     imageToCarving.bitLength = parseFloat(document.getElementById("bitLength").value, 10);
+    imageToCarving.feedrate = parseFloat(document.getElementById("feedrate").value, 10);
     gcode = imageToCarving.getGCode(theImage);
     document.getElementById("result").value = gcode;
     if(gcode === "") {
-        alert("Nothing generated");
+        window.alert("Nothing generated");
     }
 };
 
@@ -478,7 +484,7 @@ document.getElementById("image-upload").onclick = function() {
     if(file !== null) {
         reader.readAsDataURL(file);
     } else {
-        alert("No file.");
+        window.alert("No file.");
     }
 };
 

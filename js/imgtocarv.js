@@ -45,11 +45,11 @@ var imageToCarving = {
      * @param {number} j The column number.
      * @return {number} The percentage (0 to 1) of black in the pixel.
      */
-    getPercentage: function(imageData, i, j) {
+    getBlackPercentage: function(imageData, i, j) {
         //1 px = [R, G, B, A]
         var px = (parseInt(i, 10) * imageData.width + parseInt(j, 10)) * 4;
 
-        //NOTE: do we should include the transparency in the process?
+        //NOTE: transparent pixels are considered as parts not carved
         if(px >= imageData.data.length || imageData.data[px+3] !== 255) {
             return 0;
         }
@@ -84,7 +84,7 @@ var imageToCarving = {
 
         for(i=iStart; i < imageData.height && i <= iEnd; i++) {
             for(j=jStart; j < imageData.width && j <= jEnd; j++) {
-                sum += this.getPercentage(imageData, i, j);
+                sum += this.getBlackPercentage(imageData, i, j);
                 count++;
             }
         }
@@ -379,12 +379,10 @@ var imageToCarving = {
             return gcode;
         }
 
-        //TODO: work on the initialization (put feed rate for G1 commands)
         gcode += "G20 (inches)\n";
         gcode += "G17 (XY plane for circular interpolation)\n";
         gcode += "G90 (absolute)\n";
 
-        // gcode += "G0 Z" + this.safeZ.toFixed(5) + " F" + this.feedrate.toFixed(5) + "\n";
         gcode += "G0 Z" + this.safeZ.toFixed(5) + "\n";
         gcode += "M3 (Spindle on clock wise)\n";
 
@@ -395,7 +393,7 @@ var imageToCarving = {
         gcode += "M8 (Spindle off)\n";
 
         gcode += "(Go to the initial position)\n";
-        // gcode += "G0 Z" + this.safeZ.toFixed(5) + "\n";
+        gcode += "G0 Z" + this.safeZ.toFixed(5) + "\n";
         gcode += "G0 X0 Y0\n";
         gcode += "M05\n";
         gcode += "M02\n";
@@ -418,13 +416,25 @@ var imageToCarving = {
     }
 };
 
+//image is an Image instance
+function getImageData(image) {
+    var canvas = document.createElement('canvas');
+    canvas.width = image.width;
+    canvas.height = image.height;
+    var context = canvas.getContext('2d');
+    context.drawImage(image, 0, 0);
+    return context.getImageData(0, 0, image.width, image.height);
+}
+
+//TODO: this function was for testing, has to be removed
 //Generate the grayscale image on the canvas
-function generateGrayscaleImage(canvas, image) {
+function generateGrayscaleImageAccordingParameters(canvas, image) {
     var i = 0, index = 0;
     var table = imageToCarving.getTablePercentage(image);
     canvas.width = table.width;
     canvas.height = table.height;
     var ctx = canvas.getContext('2d');
+    //new ImageData(width, height) does not seem to be supported in IE
     var imageData = ctx.createImageData(table.width, table.height);
 
     for(i=0; i < table.table.length; i++) {
@@ -434,6 +444,32 @@ function generateGrayscaleImage(canvas, image) {
         imageData.data[index+2] = (1-table.table[i]) * 255;
         imageData.data[index+3] = 255;
     }
+    ctx.putImageData(imageData, 0, 0);
+}
+
+//Generates the grayscale image in the canvas
+function generateGrayscaleImage(image) {
+    var canvas = document.getElementById("grayscale-image");
+    canvas.width = image.width;
+    canvas.height = image.height;
+    var ctx = canvas.getContext('2d');
+    var originalData = getImageData(image);
+    var imageData = ctx.createImageData(image.width, image.height);
+    var color = 0;
+    var i = 0;
+
+    for(i=0; i < imageData.data.length; i+=4) {
+        if(originalData.data[i+3] !== 255) {
+            color = 255;  // Transparency is considered as not carved
+        } else {
+            color = originalData.data[i];  // Assuming R = G = B
+        }
+        imageData.data[i]   = color;
+        imageData.data[i+1] = color;
+        imageData.data[i+2] = color;
+        imageData.data[i+3] = 255;
+    }
+
     ctx.putImageData(imageData, 0, 0);
 }
 
@@ -466,8 +502,9 @@ document.getElementById("generate").onclick = function() {
 };
 
 
+//TODO: delete this. It was for testing
 document.getElementById("percentage").onclick = function() {
-    generateGrayscaleImage(document.getElementById("canvas"), theImage);
+    generateGrayscaleImageAccordingParameters(document.getElementById("canvas"), theImage);
 };
 
 document.getElementById("image-upload").onclick = function() {
@@ -479,6 +516,7 @@ document.getElementById("image-upload").onclick = function() {
         theImage = new Image();
         theImage.src = reader.result;
         document.getElementById("image").src = reader.result;
+        generateGrayscaleImage(theImage);
     };
 
     if(file !== null) {

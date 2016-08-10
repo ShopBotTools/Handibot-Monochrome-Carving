@@ -2,6 +2,21 @@ img {
     border: 1px solid red;
 }
 
+#grayscale-image {
+    border: 1px solid red;
+}
+
 #configuration-fieldset {
     float: left;
+}
+
+input[type=text] {
+    width: 75px;
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+
+button {
+    margin-top: 2px;
+    margin-bottom: 2px;
 }

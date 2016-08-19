@@ -17,6 +17,8 @@
 //     |     |              |     |
 //      1  0.5               1  0.5
 //     marginEdge < 0.5   marginEdge >= 0.5
+//
+//     It is called a bevel...
 
 //TODO: Find a better name for "table":
 //      it is supposed to be a map of height variation (in Z) for each
@@ -416,6 +418,9 @@ var imageToCarving = {
     }
 };
 
+var originalImage = new Image();
+var grayscaleImage = new Image();
+
 //image is an Image instance
 function getImageData(image) {
     var canvas = document.createElement('canvas');
@@ -424,27 +429,6 @@ function getImageData(image) {
     var context = canvas.getContext('2d');
     context.drawImage(image, 0, 0);
     return context.getImageData(0, 0, image.width, image.height);
-}
-
-//TODO: this function was for testing, has to be removed
-//Generate the grayscale image on the canvas
-function generateGrayscaleImageAccordingParameters(canvas, image) {
-    var i = 0, index = 0;
-    var table = imageToCarving.getTablePercentage(image);
-    canvas.width = table.width;
-    canvas.height = table.height;
-    var ctx = canvas.getContext('2d');
-    //new ImageData(width, height) does not seem to be supported in IE
-    var imageData = ctx.createImageData(table.width, table.height);
-
-    for(i=0; i < table.table.length; i++) {
-        index = i * 4;
-        imageData.data[index]   = (1-table.table[i]) * 255;
-        imageData.data[index+1] = (1-table.table[i]) * 255;
-        imageData.data[index+2] = (1-table.table[i]) * 255;
-        imageData.data[index+3] = 255;
-    }
-    ctx.putImageData(imageData, 0, 0);
 }
 
 //Generates the grayscale image in the canvas
@@ -471,12 +455,10 @@ function generateGrayscaleImage(image) {
     }
 
     ctx.putImageData(imageData, 0, 0);
+    grayscaleImage.src = canvas.toDataURL("img/png");
 }
 
 document.getElementById("result").value = "";
-var theImage = new Image();
-theImage.src = document.getElementById("image").src;
-
 document.getElementById("pixelToInch").value = imageToCarving.pixelToInch;
 document.getElementById("bitDiameter").value = imageToCarving.bitDiameter;
 document.getElementById("maxCarvingDepth").value = imageToCarving.maxCarvingDepth;
@@ -486,25 +468,24 @@ document.getElementById("bitLength").value = imageToCarving.bitLength;
 document.getElementById("feedrate").value = imageToCarving.feedrate;
 
 document.getElementById("generate").onclick = function() {
+
+    function getFloat(id) {
+        return parseFloat(document.getElementById(id).value, 10);
+    }
+
     var gcode = "";
-    imageToCarving.pixelToInch = parseFloat(document.getElementById("pixelToInch").value, 10);
-    imageToCarving.maxCarvingDepth = parseFloat(document.getElementById("maxCarvingDepth").value, 10);
-    imageToCarving.marginEdge = parseFloat(document.getElementById("marginEdge").value, 10);
-    imageToCarving.safeZ = parseFloat(document.getElementById("safeZ").value, 10);
-    imageToCarving.bitDiameter = parseFloat(document.getElementById("bitDiameter").value, 10);
-    imageToCarving.bitLength = parseFloat(document.getElementById("bitLength").value, 10);
-    imageToCarving.feedrate = parseFloat(document.getElementById("feedrate").value, 10);
-    gcode = imageToCarving.getGCode(theImage);
+    imageToCarving.pixelToInch = getFloat("pixelToInch");
+    imageToCarving.maxCarvingDepth = getFloat("maxCarvingDepth");
+    imageToCarving.marginEdge = getFloat("marginEdge");
+    imageToCarving.safeZ = getFloat("safeZ");
+    imageToCarving.bitDiameter = getFloat("bitDiameter");
+    imageToCarving.bitLength = getFloat("bitLength");
+    imageToCarving.feedrate = getFloat("feedrate");
+    gcode = imageToCarving.getGCode(grayscaleImage);
     document.getElementById("result").value = gcode;
     if(gcode === "") {
         window.alert("Nothing generated");
     }
-};
-
-
-//TODO: delete this. It was for testing
-document.getElementById("percentage").onclick = function() {
-    generateGrayscaleImageAccordingParameters(document.getElementById("canvas"), theImage);
 };
 
 document.getElementById("image-upload").onclick = function() {
@@ -513,10 +494,11 @@ document.getElementById("image-upload").onclick = function() {
     var reader = new FileReader();
 
     reader.onloadend = function() {
-        theImage = new Image();
-        theImage.src = reader.result;
+        originalImage = new Image();
+        originalImage.src = reader.result;
         document.getElementById("image").src = reader.result;
-        generateGrayscaleImage(theImage);
+        // Sort of race condition, originalImage is not already well loaded
+        setTimeout(function() { generateGrayscaleImage(originalImage); }, 300);
     };
 
     if(file !== null) {
